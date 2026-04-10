@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的私密共享空间</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input, textarea, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 6px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #0070f3; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #005bb5; }
+        #loginScreen, #mainApp { }
+        .hidden { display: none; }
+        .item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .item img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+        .delete-btn { background: #ff4d4f; margin-top: 5px; font-size: 0.8em; width: auto; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 登录界面 -->
+    <div id="loginScreen">
+        <h2>🔒 请输入访问口令</h2>
+        <input type="password" id="passwordInput" placeholder="在此输入密码">
+        <button onclick="checkPassword()">进入</button>
+        <p id="loginError" style="color:red; display:none;">密码错误！</p>
+    </div>
+
+    <!-- 主界面 -->
+    <div id="mainApp" class="hidden">
+        <h2>📝 发布新内容</h2>
+        <textarea id="contentText" rows="4" placeholder="输入文字..."></textarea>
+        <input type="file" id="contentImage" accept="image/*">
+        <button onclick="postData()">保存并上传</button>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>📂 历史记录</h2>
+        <div id="contentList">加载中...</div>
+    </div>
+</div>
+
+<script>
+    // ⚠️ 在这里设置你的密码
+    const MY_PASSWORD = "123456"; 
+    // ⚠️ 在这里设置你的 Worker 地址 (部署完 Worker 后填入)
+    const API_URL = "https://你的-worker-name.你的-subdomain.workers.dev"; 
+
+    // 检查密码
+    function checkPassword() {
+        const input = document.getElementById('passwordInput').value;
+        if(input === MY_PASSWORD) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            fetchContent();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+
+    // 上传数据
+    async function postData() {
+        const text = document.getElementById('contentText').value;
+        const fileInput = document.getElementById('contentImage');
+        const file = fileInput.files[0];
+
+        const formData = new FormData();
+        formData.append('text', text);
+        if(file) formData.append('image', file);
+
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: formData
+        });
+
+        if(res.ok) {
+            alert('上传成功');
+            document.getElementById('contentText').value = '';
+            fileInput.value = '';
+            fetchContent();
+        } else {
+            alert('上传失败');
+        }
+    }
+
+    // 获取数据
+    async function fetchContent() {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        const list = document.getElementById('contentList');
+        list.innerHTML = '';
+
+        data.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `
+                <p>${item.text}</p>
+                ${item.image_url ? `<img src="${item.image_url}">` : ''}
+                <small>${new Date(item.created_at).toLocaleString()}</small>
+            `;
+            list.appendChild(div);
+        });
+    }
+</script>
+
+</body>
+</html>
